@@ -1,5 +1,14 @@
-from tool import  ETFAnalyzer
+from tool import ETF_Cleaner
+cleaner = ETF_Cleaner()
 
-etf_analyzer = ETFAnalyzer("/Users/aleksa/Code/PY/Py - MY Scripts/ETFs_Tickers.csv")
-etf_list = etf_analyzer.make_etf_list
-print(etf_list)
+
+cleaner.etf_list_path = "/Users/aleksa/Code/ETF_compare/ETF_Tickers.csv"
+cleaner.etf_description_path = "/Users/aleksa/Code/ETF_compare/ETF_Description.pkl"
+cleaner.etf_data_path = "/Users/aleksa/Code/ETF_compare/ETF_Data.pkl"
+
+d = cleaner.etf_data
+print(d)
+
+print(len(d))
+
+
