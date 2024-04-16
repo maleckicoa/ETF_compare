@@ -1,16 +1,14 @@
 
-import os
-import sys
 import pickle
 import pandas as pd
 import numpy as np
 import statistics as stat
-import math
 from datetime import date
 from collections import OrderedDict
 import yfinance as yf
+import matplotlib.pyplot as plt
 
-class ETF_Cleaner:
+class EtfCleaner:
     def __init__(self):
         self._etf_list_path = None
         self._etf_description_path = None
@@ -214,4 +212,140 @@ class ETF_Cleaner:
         if len(jump_list) < min_series or max(jump_list) >= jump_size or min(jump_list) <= 1 / jump_size:
             return True
 
+
+
+class EtfAnalyzer:
+    def __init__(self):
+        self.etf_dict = None
+
+    def etf_dict_maker(self,
+                             df_dict,
+                             etf_description,
+                             year_list=(1, 2, 5, 7, 10),
+                             window=5):
+        nested_dict = {}
+
+        for i in df_dict.keys():
+            nested_dict[f'{i}'] = {}
+
+            orig_series = df_dict[i].dropna()
+            start_date = str(orig_series.index[0])
+
+            try:
+                description = etf_description[i]
+            except:
+                description = 'No Description'
+
+            nested_dict[f'{i}'] = {'Description': description}
+            nested_dict[f'{i}'][f'Original_Series'] = {'series': orig_series, 'start_date': start_date}
+            nested_dict[f'{i}']['Returns'] = {}
+
+            for year in year_list:
+                core_series = orig_series[len(orig_series) - (year + window) * 12:len(orig_series)]
+                returns = [core_series.iloc[j] / core_series.iloc[j - year * 12] for j in
+                           list(range(0, len(core_series))) if (j >= year * 12)]
+
+                if len(returns) > 0:
+                    med_return = stat.median(returns)
+                else:
+                    med_return = 0
+
+                nested_dict[f'{i}']['Returns'][f'{year}_Years'] = {'name': i, 'data_points': len(returns),
+                                                                   'median_return': med_return, 'returns': returns}
+        self.etf_dict = nested_dict
+
+    @classmethod
+    def _etf_ranking(cls, summary_dict: dict, row_no:int):
+        df = pd.DataFrame(summary_dict)
+        df_reversed = df.iloc[::-1].reset_index(drop=True)
+        df_reversed['rank'] = df_reversed.index + 1
+        df_melted = df_reversed.melt(id_vars='rank', var_name='', value_name='Ticker')
+        df_pivot = df_melted.pivot(index='Ticker', columns='', values='rank')
+        df_pivot['Points'] = df_pivot.sum(axis=1, skipna=True)
+
+        df_points = df_pivot.sort_values(by=['Points'], ascending=False)
+        df_points = df_points.astype('Int64')
+        df_points['Ticker'] = df_points.index
+        df_points = df_points[['Ticker', '1_Years', '2_Years', '5_Years', '7_Years', '10_Years', 'Points']].fillna(0)
+        return df_points.head(row_no)
+
+    @classmethod
+    def _contain_substr(cls, s, substrings):
+        return any(sub in s for sub in substrings)
+
+    @classmethod
+    def plot_tool(cls,
+                  nested_dict,
+                  leveraged_substrings=('2X', '2x', '3X', '3x', 'Leveraged', 'ProShares'),
+                  corrupt_keys=['EU', 'RYF','EEP.PA', 'BITCOIN-XBT.ST'],
+                  year_window=('1_Years', '2_Years', '5_Years', '7_Years', '10_Years'),
+                  boxplot_no=20,
+                  compare_list = []):
+
+
+        if len(list(set(compare_list) - set(list(nested_dict.keys()))))>0:
+            raise ValueError("One or more ticker symbols you provided does not exist")
+
+
+        if boxplot_no >20:
+            raise ValueError("Maximum 20 boxplots are supported")
+
+
+        leveraged_keys = [key for key, values in nested_dict.items() if
+                          cls._contain_substr(values['Description'], leveraged_substrings) == True]
+
+        remove_keys = corrupt_keys + leveraged_keys
+        nested_dict_clean = {key: value for key, value in nested_dict.items() if key not in remove_keys}
+
+
+        fig, axes = plt.subplots(nrows=6, ncols=1, figsize=(15, 30))
+        axes = axes.flatten()
+
+        summary = dict()
+
+        for idx, i in enumerate(year_window):
+
+            sorted_keys = sorted(nested_dict_clean.keys(), reverse=True,
+                                 key=lambda x: nested_dict_clean[x]['Returns'][i]['median_return'])
+            sorted_dict = {key: nested_dict_clean[key] for key in sorted_keys}
+
+            tickers = list()
+            description_list = list()
+            data_to_plot = list()
+            etf_names = list()
+
+            sorted_list = list(sorted_dict.keys())[0:boxplot_no]
+            trim = len(list(set(compare_list) - set(sorted_list)))
+            sorted_list = list(sorted_dict.keys())[0:boxplot_no - trim]
+            combined_dict = dict.fromkeys(sorted_list + compare_list)
+
+
+            for j in list(combined_dict):
+                returns = sorted_dict[j]['Returns'][i]['returns']
+                median_return = sorted_dict[j]['Returns'][i]['median_return'].round(2)
+                description = sorted_dict[j]['Description']
+
+                tickers.append(j)
+                description_list.append(j + ' - ' + str(median_return) + ' - ' + description)
+                data_to_plot.append(returns)
+                etf_names.append(j)
+
+            summary[i] = tickers
+
+            axes[idx].boxplot(data_to_plot)
+            axes[idx].set_title(i)
+            axes[idx].set_ylabel('Cumulative Return')
+            axes[idx].set_xticks(list(range(1, len(etf_names) + 1)), etf_names,
+                                 rotation=90)  # Setting the x-ticks to match stock names
+            axes[idx].legend(description_list, loc='upper left', bbox_to_anchor=(1, 1), fontsize=7, handlelength=0,
+                             handletextpad=0, markerscale=0)
+
+        df_points_table = cls._etf_ranking(summary, boxplot_no)
+        axes[5].table(cellText=df_points_table.values, colLabels=df_points_table.columns, loc='center')
+        axes[5].axis('off')
+
+        plt.tight_layout()
+        plt.subplots_adjust(hspace=0.5)
+        plt.savefig("/Users/aleksa/Code/ETF_compare/boxplots.png")
+        #plt.show()
 

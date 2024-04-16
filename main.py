@@ -1,14 +1,16 @@
-from tool import ETF_Cleaner
-cleaner = ETF_Cleaner()
+from tool import EtfCleaner, EtfAnalyzer
+cleaner = EtfCleaner()
 
 
 cleaner.etf_list_path = "/Users/aleksa/Code/ETF_compare/ETF_Tickers.csv"
 cleaner.etf_description_path = "/Users/aleksa/Code/ETF_compare/ETF_Description.pkl"
 cleaner.etf_data_path = "/Users/aleksa/Code/ETF_compare/ETF_Data.pkl"
 
-d = cleaner.etf_data
-print(d)
 
-print(len(d))
+df_dict = cleaner.etf_data
+etf_description = cleaner.etf_description
 
-
+analyzer = EtfAnalyzer()
+analyzer.etf_dict_maker(df_dict, etf_description)
+EtfAnalyzer.plot_tool(analyzer.etf_dict, boxplot_no=15, compare_list=['SOXX','SPY'])
+#print(df_dict.keys())
