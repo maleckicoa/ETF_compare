@@ -12,5 +12,10 @@ etf_description = cleaner.etf_description
 
 analyzer = EtfAnalyzer()
 analyzer.etf_dict_maker(df_dict, etf_description)
-EtfAnalyzer.plot_tool(analyzer.etf_dict, boxplot_no=15, compare_list=['SOXX','SPY'])
+EtfAnalyzer.plot_tool(
+    analyzer.etf_dict,
+    boxplot_no=15,
+    compare_list=['SOXX','SPY'],
+    fig_path= "/Users/aleksa/Code/maleckicoa.github.io/assets/images/2024-04-15-ETF-compare/boxplots.png"
+)
 #print(df_dict.keys())

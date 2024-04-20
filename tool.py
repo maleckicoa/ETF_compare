@@ -7,6 +7,7 @@ from datetime import date
 from collections import OrderedDict
 import yfinance as yf
 import matplotlib.pyplot as plt
+from logger import log_output_to_file
 
 class EtfCleaner:
     def __init__(self):
@@ -82,7 +83,6 @@ class EtfCleaner:
             return None
 
     def make_description_file(self, path):
-
         if self._etf_list is None:
             print("ETF list is not loaded. Please set the etf_list_path first.")
             return
@@ -123,6 +123,7 @@ class EtfCleaner:
             print(f"To create the data file again run the make_data_file method ")
             return None
 
+    @log_output_to_file('output.log')
     def make_etf_data(self, path):
         df_dict = {}
         nan_series = self._make_nan_series()
@@ -223,6 +224,29 @@ class EtfAnalyzer:
                              etf_description,
                              year_list=(1, 2, 5, 7, 10),
                              window=5):
+        """
+        The Method returns a dictionary of the format:
+
+        Ticker
+            Description : the description of the ETF
+            Original_series : the original ETF price data
+            Returns
+                1_Years
+                    name: ETF ticker name
+                    data points: length of series
+                    median_return: the median value of the returns series
+                    returns: a series of 1-year ETF returns in a rolling window, always on the 1st of the month,
+                2_Years
+                    name: ...
+                    data points: ...
+                    median_return: ...
+                    returns: a series of 2-year ETF returns, always on the 1st of the month, on a rolling window
+                5_Years
+                7_Years
+                10_Years
+                .
+        """
+
         nested_dict = {}
 
         for i in df_dict.keys():
@@ -280,7 +304,8 @@ class EtfAnalyzer:
                   corrupt_keys=['EU', 'RYF','EEP.PA', 'BITCOIN-XBT.ST'],
                   year_window=('1_Years', '2_Years', '5_Years', '7_Years', '10_Years'),
                   boxplot_no=20,
-                  compare_list = []):
+                  compare_list = [],
+                  fig_path = './boxplot.png'):
 
 
         if len(list(set(compare_list) - set(list(nested_dict.keys()))))>0:
@@ -288,7 +313,7 @@ class EtfAnalyzer:
 
 
         if boxplot_no >20:
-            raise ValueError("Maximum 20 boxplots are supported")
+            raise ValueError("Maximum 20 boxplots are supported in the figure")
 
 
         leveraged_keys = [key for key, values in nested_dict.items() if
@@ -319,10 +344,10 @@ class EtfAnalyzer:
             sorted_list = list(sorted_dict.keys())[0:boxplot_no - trim]
             combined_dict = dict.fromkeys(sorted_list + compare_list)
 
-
             for j in list(combined_dict):
                 returns = sorted_dict[j]['Returns'][i]['returns']
-                median_return = sorted_dict[j]['Returns'][i]['median_return'].round(2)
+                median_return = sorted_dict[j]['Returns'][i]['median_return']
+                median_return = float(f'{median_return:.1g}')
                 description = sorted_dict[j]['Description']
 
                 tickers.append(j)
@@ -336,7 +361,7 @@ class EtfAnalyzer:
             axes[idx].set_title(i)
             axes[idx].set_ylabel('Cumulative Return')
             axes[idx].set_xticks(list(range(1, len(etf_names) + 1)), etf_names,
-                                 rotation=90)  # Setting the x-ticks to match stock names
+                                 rotation=90)
             axes[idx].legend(description_list, loc='upper left', bbox_to_anchor=(1, 1), fontsize=7, handlelength=0,
                              handletextpad=0, markerscale=0)
 
@@ -346,6 +371,6 @@ class EtfAnalyzer:
 
         plt.tight_layout()
         plt.subplots_adjust(hspace=0.5)
-        plt.savefig("/Users/aleksa/Code/ETF_compare/boxplots.png")
+        plt.savefig(fig_path)
         #plt.show()
 
