@@ -25,6 +25,9 @@ class EtfCleaner:
 
     @etf_list_path.setter
     def etf_list_path(self, path):
+        """
+        Set the path to the ETF_Tickers file
+        """
         self._etf_list_path = path
         self._etf_list = self.load_etf_list(path)
 
@@ -34,6 +37,9 @@ class EtfCleaner:
 
     @etf_description_path.setter
     def etf_description_path(self, path):
+        """
+        Set the path to the ETF_Description file
+        """
         self._etf_description_path = path
         self._etf_description = self.load_etf_description(path)
 
@@ -43,6 +49,9 @@ class EtfCleaner:
 
     @etf_data_path.setter
     def etf_data_path(self, path):
+        """
+        Set the path to the ETF_Data file
+        """
         self._etf_data_path = path
         self._etf_data = self.load_etf_data(path)
 
@@ -59,7 +68,13 @@ class EtfCleaner:
         return self._etf_data
 
     def load_etf_list(self, path):
-        # Load ETF list from a CSV file
+        """
+        Load the ETF list from a CSV file
+
+        :param path: path to the csv file
+        :return: A list of all ETFs in the ETF_Ticker file
+        """
+
         try:
             etf_data = pd.read_csv(path)
             etf_list = etf_data['TICKER'].tolist()
@@ -72,7 +87,14 @@ class EtfCleaner:
             return None
 
     def load_etf_description(self, path):
-        # Load ETF description from a pickle file
+        """
+        Loads the ETF description from a pickle file
+
+        :param path: path to the pickle file
+        :return: A dictionary with all ETF names and short description
+        """
+
+
         try:
             with open(path, 'rb') as file:
                 etf_description = pickle.load(file)
@@ -83,6 +105,12 @@ class EtfCleaner:
             return None
 
     def make_description_file(self, path):
+        """
+        Calls the Yahoo Finance API and creates the ETF_Description.pkl file for all ETF Tickers
+
+        :param path: path to where the pickle file is stored
+        :return: None
+        """
         if self._etf_list is None:
             print("ETF list is not loaded. Please set the etf_list_path first.")
             return
@@ -113,6 +141,12 @@ class EtfCleaner:
             print("ETF description file created.")
 
     def load_etf_data(self, path):
+        """
+        Loads the ETF price data from a pickle file
+
+        :param path: path to where the pickle file is
+        :return: A dictionary of prices for all ETF tickers
+        """
         # Load ETF description from a pickle file
         try:
             with open(path, 'rb') as file:
@@ -125,6 +159,12 @@ class EtfCleaner:
 
     @log_output_to_file('output.log')
     def make_etf_data(self, path):
+        """
+        Creates the ETF_Data.pkl file
+
+        :param path: path to where the pickle file is stored
+        :return: None
+        """
         df_dict = {}
         nan_series = self._make_nan_series()
 
@@ -167,6 +207,14 @@ class EtfCleaner:
             print("ETF data file created.")
 
     def _gap(self, df, gap_size=5):
+
+        """
+        Private method to eliminate ETFs with a given gap in price data
+
+        :param df: dataframe of Yahoo prices for one ETF
+        :param gap_size: int
+        :return: bool
+        """
         data = list(df)
         for idx, i in enumerate(data):
             if isinstance(i, float):
@@ -186,6 +234,10 @@ class EtfCleaner:
 
 
     def _make_nan_series(self):
+        """
+        Private method that sets the maximum time series length as of 1993
+        :return: pandas Series
+        """
         date_range = pd.date_range(start='1993-01-01', end=date.today(), freq='MS')
         nan_series = pd.Series(np.nan, index=date_range)
         nan_series = nan_series.sort_index()
@@ -194,6 +246,11 @@ class EtfCleaner:
         return nan_series
 
     def _clean_df_index(self, df):
+        """
+        Private method that filters out prices which are not from 1st of month
+        :param df: dataframe of Yahoo prices for one ETF
+        :return: clean dataframe of Yahoo prices for one ETF
+        """
         df = df.sort_index()
         df.index = pd.to_datetime(df.index)
         is_first_of_month = df.index.is_month_start
@@ -201,13 +258,27 @@ class EtfCleaner:
         df.index = df.index.date
         return df
 
-    def _check_last_6_months(self, long_df, nan_series):
+    def _check_last_6_months(self, df, nan_series):
+        """
+        Private method that eliminated ETFs for which there are gaps in the last 6 months of data
+        :param df: dataframe of Yahoo prices for one ETF
+        :param nan_series: the default empty time eries as of 1993
+        :return: bool
+        """
         set1 = set(list(nan_series[-9:-3].index))
-        set2 = set(list(long_df.index))
+        set2 = set(list(df.index))
         intersection = set1.intersection(set2)
         return len(intersection) != 6
 
     def _check_jump(self, df, min_series=24, jump_size=3):
+        """
+        Private method that filters out an ETF if the price series doesn't have a necessary minimum length of 2 years, and if there are any
+        large price jumps between 2 consecutive months (jumps/falls larger than +300% /-66%)
+        :param df: dataframe of Yahoo prices for one ETF
+        :param min_series: (int) minimum price series length in months
+        :param jump_size: (maximum) allowed price jump between 2 months
+        :return: bool
+        """
         clean_list = [x for x in df if not pd.isna(x)]
         jump_list = [x / clean_list[idx - 1] for idx, x in enumerate(clean_list) if idx > 0]
         if len(jump_list) < min_series or max(jump_list) >= jump_size or min(jump_list) <= 1 / jump_size:
@@ -244,7 +315,12 @@ class EtfAnalyzer:
                 5_Years
                 7_Years
                 10_Years
-                .
+
+        :param df_dict: a dictionary of price data for all ETFs
+        :param etf_description: a dictionary of descriptions for all ETFs
+        :param year_list: (tuple) ETF holding periods
+        :param window: the number of years added to the holding period to define the total time frame of the ETF investment
+        :return: None
         """
 
         nested_dict = {}
@@ -280,18 +356,25 @@ class EtfAnalyzer:
 
     @classmethod
     def _etf_ranking(cls, summary_dict: dict, row_no:int):
+        """
+        Private class method that yields the points table at the end of the report
+
+        :param summary_dict: (dict) a dictionary of ETFs and their respective points obtained within each holding period group
+        :param row_no: (int) number of rows in the table /number of ETFs
+        :return: (dataframe) dataframe of ETFs ranked by their overall performance
+        """
         df = pd.DataFrame(summary_dict)
         df_reversed = df.iloc[::-1].reset_index(drop=True)
         df_reversed['rank'] = df_reversed.index + 1
         df_melted = df_reversed.melt(id_vars='rank', var_name='', value_name='Ticker')
         df_pivot = df_melted.pivot(index='Ticker', columns='', values='rank')
         df_pivot['Points'] = df_pivot.sum(axis=1, skipna=True)
-
         df_points = df_pivot.sort_values(by=['Points'], ascending=False)
         df_points = df_points.astype('Int64')
         df_points['Ticker'] = df_points.index
         df_points = df_points[['Ticker', '1_Years', '2_Years', '5_Years', '7_Years', '10_Years', 'Points']].fillna(0)
         return df_points.head(row_no)
+
 
     @classmethod
     def _contain_substr(cls, s, substrings):
@@ -306,10 +389,22 @@ class EtfAnalyzer:
                   boxplot_no=20,
                   compare_list = [],
                   fig_path = './boxplot.png'):
+        """
+        Class method for plotting the final report
+
+        :param nested_dict: (dict) A processed and comprehensive dictionary of original prices, returns, descriptions, etc. for all ETFs
+        :param leveraged_substrings: (tuple) substrings provided to locate and filter out the leverage ETFs
+        :param corrupt_keys: (list) ETF tickers for which the Yahoo Finance API returns corrupted/incorrect prices
+        :param year_window: (tuple) holding periods
+        :param boxplot_no: (int) number of boxplots to be plotted per holding period, maximum 20 boxplots
+        :param compare_list: (list) list of ETFs the user can include to be compared against the best performing ETFs
+        :param fig_path: (str) path to where the report is stored
+        :return: PNG image
+        """
 
 
         if len(list(set(compare_list) - set(list(nested_dict.keys()))))>0:
-            raise ValueError("One or more ticker symbols you provided does not exist")
+            raise ValueError("One or more ticker symbols you provided does not exist in the ETF_Tickers input list")
 
 
         if boxplot_no >20:
@@ -340,18 +435,18 @@ class EtfAnalyzer:
             etf_names = list()
 
             sorted_list = list(sorted_dict.keys())[0:boxplot_no]
-            trim = len(list(set(compare_list) - set(sorted_list)))
+            compare_list_trim = [x for x in compare_list if x not in sorted_list]
+            trim = len(compare_list_trim)
             sorted_list = list(sorted_dict.keys())[0:boxplot_no - trim]
-            combined_dict = dict.fromkeys(sorted_list + compare_list)
-
+            combined_dict = dict.fromkeys(sorted_list + compare_list_trim)
             for j in list(combined_dict):
+
                 returns = sorted_dict[j]['Returns'][i]['returns']
                 median_return = sorted_dict[j]['Returns'][i]['median_return']
-                median_return = float(f'{median_return:.1g}')
                 description = sorted_dict[j]['Description']
 
                 tickers.append(j)
-                description_list.append(j + ' - ' + str(median_return) + ' - ' + description)
+                description_list.append(j + ' - ' + f'{median_return:.3g}' + ' - ' + description)
                 data_to_plot.append(returns)
                 etf_names.append(j)
 
