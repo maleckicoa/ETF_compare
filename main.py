@@ -1,6 +1,4 @@
 from etf_compare import EtfCleaner, EtfAnalyzer
-import pandas as pd
-cleaner = EtfCleaner()
 
 
 your_path = "/Users/aleksa/Code/ETF_compare"
@@ -14,4 +12,7 @@ etf_data = cleaner.etf_data
 etf_description = cleaner.etf_description
 analyzer = EtfAnalyzer()
 analyzer.etf_dict_maker(etf_data, etf_description)
-EtfAnalyzer.plot_tool( analyzer.etf_dict, boxplot_no=20, compare_list=['SMH','SOXX','SPY','QQQ'], fig_path= your_path + "//boxplots.png" )
+EtfAnalyzer.plot_tool( analyzer.etf_dict,
+                       boxplot_no=20,
+                       compare_list=['SMH','SOXX','SPY','QQQ'],
+                       fig_path= your_path + "//boxplots.png" )
