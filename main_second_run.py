@@ -2,7 +2,7 @@ from etf_compare import EtfCleaner, EtfAnalyzer
 
 if __name__ == "__main__":
 
-    your_path = "/Users/aleksa/Code/ETF_compare"
+    your_path = "/Users/aleksa/Code/ETF_compare"                      # set a path where all files are generated
 
     cleaner = EtfCleaner()                                            # initialize the cleaner object
     cleaner.etf_list_path = your_path + "/ETF_Tickers.csv"            # set the path to the list of tickers
