@@ -117,4 +117,5 @@ The ***plot_tool*** method supports:
 - by default the leverage ETFs are removed (argument: leveraged_substrings=('2X', '2x', '3X', '3x', 'Leveraged', 'ProShares'),
 - the ETFs for which the API returns incorrect data are removed (argument: corrupt_keys=['EU', 'RYF','EEP.PA', 'BITCOIN-XBT.ST'])
 
+The ***output.log*** file contains the log messages from loading the ETFs via *yfinance*
 
