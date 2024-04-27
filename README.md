@@ -39,7 +39,7 @@ Run the *main_first_run.py* script:
 from etf_compare import EtfCleaner, EtfAnalyzer
 
 your_path= "your_path"
-cleaner = EtfCleaner()
+cleaner = EtfCleaner()   # initialize the cleaner object
 cleaner.etf_list_path =  your_path + "/ETF_Tickers.csv"  # set the path to the list of tickers
 cleaner.make_description_file(path= your_path + "/ETF_Description.pkl")  # create ETF description file for given tickers (this can take time)
 cleaner.etf_description_path = your_path + "/ETF_Description.pkl"  # set the path to the ETF description file
@@ -77,7 +77,7 @@ from etf_compare import EtfCleaner, EtfAnalyzer
 your_path= "your_path"
 
 # Initialize the EtfCleaner object
-cleaner = EtfCleaner()
+cleaner = EtfCleaner()  # initialize the cleaner object
 cleaner.etf_list_path = your_path + "/ETF_Tickers.csv" # set the path to the list of tickers
 cleaner.etf_description_path = your_path + "/ETF_Description.pkl"  # set the path to the ETF description file
 cleaner.etf_data_path = your_path + "/ETF_Data.pkl" # set the path to the ETF price data file
